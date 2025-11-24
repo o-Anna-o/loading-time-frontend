@@ -13,14 +13,16 @@ import { store } from './store'
 
 import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 import routes from './App'
+import React from 'react'
 
 const router = createBrowserRouter(routes, {
   basename: '/loading-time-frontend/'
 })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  
-  <Provider store={store}>
-    <RouterProvider router={router} />
-  </Provider>
+  <React.StrictMode>
+    <Provider store={store}>
+      <RouterProvider router={router} />
+    </Provider>
+  </React.StrictMode>
 )

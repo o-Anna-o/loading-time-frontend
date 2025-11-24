@@ -1,4 +1,4 @@
-
+// src/components/ShipCard.tsx
 import { Link, useNavigate } from 'react-router-dom'
 import { addShipToRequest } from '../api'
 import { getToken } from '../auth'
@@ -6,9 +6,19 @@ import '../resources/ShipCard.css'
 
 export default function ShipCard({ ship }: { ship: any }) {
   const buildImgSrc = (p?: string | null) => {
-    if (!p) return '/default.png'
-    try { new URL(p); return p }
-    catch (e) { return 'http://localhost:9000/loading-time-img/img/' + p }
+    // если нет фото — берем default из public, с учётом BASE_URL
+    if (!p) return `${import.meta.env.BASE_URL ?? '/loading-time-frontend/'}default.png`
+
+    // абсолютный URL — оставляем как есть
+    if (/^https?:\/\//i.test(p)) return p
+
+    // относительный путь к файлу на твоём image-сервере — НЕ используем localhost на проде,
+    // поэтому лучше сразу падать на default (или использовать VITE_IMG_BASE если настроен)
+    const baseImg = (import.meta.env?.VITE_IMG_BASE as string) ?? ''
+    if (baseImg) return `${baseImg}/${p}`
+
+    // fallback — default
+    return `${import.meta.env.BASE_URL ?? '/loading-time-frontend/'}default.png`
   }
 
   const src = buildImgSrc(ship.photo_url ?? ship.PhotoURL)
@@ -42,7 +52,12 @@ export default function ShipCard({ ship }: { ship: any }) {
         <img
           src={src}
           alt={name}
-          onError={(e:any)=>{ e.target.style.display='none' }}
+          onError={(e: any) => {
+            const fallback = `${import.meta.env.BASE_URL ?? '/loading-time-frontend/'}default.png`
+            if (e.target.src !== fallback) {
+              e.target.src = fallback     // ← подставляем default.png
+            }
+          }}
         />
       </div>
 
