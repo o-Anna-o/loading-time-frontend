@@ -6,7 +6,7 @@ import { getShips } from '../api'
 import ShipListIcon from '../components/ShipListIcon'
 import Breadcrumbs from '../components/Breadcrumbs'
 import mock from '../mock'
-import '../../resources/ShipDetail.css'
+import '../resources/ShipDetail.css'
 
 export default function ShipPage() {
   const { id } = useParams()

@@ -2,7 +2,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { addShipToRequest } from '../api'
 import { getToken } from '../auth'
-import '../../resources/ShipCard.css'
+import '../resources/ShipCard.css'
 
 export default function ShipCard({ ship }: { ship: any }) {
   const buildImgSrc = (p?: string | null) => {
