@@ -9,11 +9,9 @@ export default function ShipCard({ ship }: { ship: any }) {
     // если нет фото — берем default из public, с учётом BASE_URL
     if (!p) return `${import.meta.env.BASE_URL ?? '/loading-time-frontend/'}default.png`
 
-    // абсолютный URL — оставляем как есть
+    // абсолютный URL 
     if (/^https?:\/\//i.test(p)) return p
 
-    // относительный путь к файлу на твоём image-сервере — НЕ используем localhost на проде,
-    // поэтому лучше сразу падать на default (или использовать VITE_IMG_BASE если настроен)
     const baseImg = (import.meta.env?.VITE_IMG_BASE as string) ?? ''
     if (baseImg) return `${baseImg}/${p}`
 
