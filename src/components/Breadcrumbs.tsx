@@ -1,7 +1,6 @@
-
-
+import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import '../resources/Breadcrumbs.css'  
+import '../../resources/Breadcrumbs.css'  
 
 export default function Breadcrumbs() {
   const location = useLocation()
@@ -22,9 +21,11 @@ export default function Breadcrumbs() {
     switch (part) {
       case 'ships': return 'Корабли'
       case 'ship': return 'Корабли'
-      case 'request_ship': return 'Заявка'
+      case 'request_ship': return 'Заявки'
       case 'login': return 'Вход'
       case 'register': return 'Регистрация'
+      case 'profile': return 'Личный кабинет'
+      
       default: return part
     }
   }

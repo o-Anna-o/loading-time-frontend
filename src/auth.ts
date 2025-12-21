@@ -1,12 +1,18 @@
-export function saveToken(token:string) {
-  localStorage.setItem('lt_token', token)
+export function saveToken(token: string) {
+  const clean = token.replace(/^Bearer\s+/i, '').trim();
+  localStorage.setItem('lt_token', clean);
 }
+
 export function getToken(): string | null {
-  return localStorage.getItem('lt_token')
+  const raw = localStorage.getItem('lt_token');
+  if (!raw) return null;
+  return raw.replace(/^Bearer\s+/i, '').trim();
 }
+
 export function clearToken() {
-  localStorage.removeItem('lt_token')
+  localStorage.removeItem('lt_token');
 }
+
 export function isLoggedIn() {
-  return !!getToken()
+  return !!getToken();
 }

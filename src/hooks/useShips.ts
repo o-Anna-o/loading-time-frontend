@@ -1,6 +1,6 @@
 // src/hooks/useShips.ts
 import { useEffect, useState } from 'react'
-import { getShips, ShipsFilterParams } from '../api'
+import { getShips, ShipsFilterParams } from '../apii'
 import mock from '../mock'
 import { Ship } from '../types'
 
@@ -41,7 +41,7 @@ export function useShips(appliedSearch?: string) {
 
         if (!cancelled) setShips(arr)
       } catch (err) {
-        console.warn('Backend unavailable, switching to mock...', err)
+        
 
         // fallback на mock
         let arr = mock

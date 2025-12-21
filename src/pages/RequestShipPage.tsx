@@ -1,11 +1,16 @@
 // src/pages/RequestShipPage.tsx
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getRequestShip, deleteShipFromRequest, deleteRequestShip, calculateLoadingTime } from '../api'
-import ShipListIcon from '../components/ShipListIcon'
+import { getRequestShip, deleteShipFromRequest, deleteRequestShip, calculateLoadingTime, updateShipCountInRequest } from '../apii'
+import Navbar from '../components/Navbar'
 import Breadcrumbs from '../components/Breadcrumbs'
 
-type ShipInRequest = {
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { formRequestShipThunk } from "../store/slices/requestShipSlice";
+
+import { api } from "../api" // импорт сгенерированного API
+
+type ShipInRequest = {  
   Ship: {
     ShipID: number
     Name: string
@@ -32,70 +37,76 @@ export default function RequestShipPage() {
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(false)
-  const [request, setRequest] = useState<RequestShip | null>(null)
+  const [requestShip, setRequestShip] = useState<RequestShip | null>(null)
   const [containers20, setContainers20] = useState<number | ''>('')
   const [containers40, setContainers40] = useState<number | ''>('')
   const [comment, setComment] = useState<string>('')
   const [resultTime, setResultTime] = useState<string>('')
 
 
-async function load(idToLoad: string | undefined) {
-  if (!idToLoad) return
-  try {
-    setLoading(true)
-    const data = await getRequestShip(idToLoad) 
+  const [errors, setErrors] = useState({
+  c20: false,
+  c40: false,
+  });
 
-    const payload = data?.data ?? data
 
-    if (!payload || typeof payload !== 'object') {
-      throw new Error('Unexpected request_ship payload')
+  async function load(idToLoad: string | undefined) {
+    if (!idToLoad) return
+    try {
+      setLoading(true)
+      const data = await getRequestShip(idToLoad) 
+
+      const payload = data?.data ?? data
+
+      if (!payload || typeof payload !== 'object') {
+        throw new Error('Unexpected request_ship payload')
+      }
+
+      const requestShipId = payload.request_ship_id
+      const containers20 = payload.containers_20ft_count ?? 0
+      const containers40 = payload.containers_40ft_count ?? 0
+      const commentVal = payload.comment ?? ''
+      const loadingTimeVal = payload.loading_time ?? ''
+
+      const rawShips = Array.isArray(payload.ships) ? payload.ships : []
+
+      const shipsNormalized = rawShips.map((si: any) => ({
+        Ship: {
+          ShipID: si.ship_id,
+          Name: si.name,
+          PhotoURL: si.photo_url,
+          Capacity: si.capacity,
+          Length: si.length,
+          Width: si.width,
+          Cranes: si.cranes
+        },
+        ShipsCount: si.ships_count ?? 1
+      }))
+
+      const rs: RequestShip = {
+        RequestShipID: requestShipId,
+        Containers20ftCount: containers20,
+        Containers40ftCount: containers40,
+        Comment: commentVal,
+        LoadingTime: loadingTimeVal,
+        Ships: shipsNormalized
+      }
+
+      setRequestShip(rs)
+      setContainers20(rs.Containers20ftCount ?? '')
+      setContainers40(rs.Containers40ftCount ?? '')
+      setComment(rs.Comment ?? '')
+      setResultTime(rs.LoadingTime ?? '')
+    } catch (e) {
+      console.error('load request error', e)
+      if (e instanceof Error && e.message.startsWith('HTTP 401')) {
+        navigate('/login')
+      }
+      setRequestShip(null)
+    } finally {
+      setLoading(false)
     }
-
-    const requestShipId = payload.request_ship_id
-    const containers20 = payload.containers_20ft_count ?? 0
-    const containers40 = payload.containers_40ft_count ?? 0
-    const commentVal = payload.comment ?? ''
-    const loadingTimeVal = payload.loading_time ?? ''
-
-    const rawShips = Array.isArray(payload.ships) ? payload.ships : []
-
-    const shipsNormalized = rawShips.map((si: any) => ({
-      Ship: {
-        ShipID: si.ship_id,
-        Name: si.name,
-        PhotoURL: si.photo_url,
-        Capacity: si.capacity,
-        Length: si.length,
-        Width: si.width,
-        Cranes: si.cranes
-      },
-      ShipsCount: si.ships_count ?? 1
-    }))
-
-    const rs: RequestShip = {
-      RequestShipID: requestShipId,
-      Containers20ftCount: containers20,
-      Containers40ftCount: containers40,
-      Comment: commentVal,
-      LoadingTime: loadingTimeVal,
-      Ships: shipsNormalized
-    }
-
-    setRequest(rs)
-    setContainers20(rs.Containers20ftCount ?? '')
-    setContainers40(rs.Containers40ftCount ?? '')
-    setComment(rs.Comment ?? '')
-    setResultTime(rs.LoadingTime ?? '')
-  } catch (e) {
-    console.error('load request error', e)
-    if (e instanceof Error && e.message.startsWith('HTTP 401')) {
-      navigate('/login')
-    }
-    setRequest(null)
-  } finally {
-    setLoading(false)
   }
-}
 
 
 
@@ -106,11 +117,39 @@ async function load(idToLoad: string | undefined) {
     return ()=> window.removeEventListener('lt:basket:refresh', handler)
   }, [id])
 
-  async function onDeleteShip(shipId: number) {
-    if (!request) return
+  // Функция для обновления количества кораблей в локальном состоянии
+  const updateShipCount = (shipId: number, newCount: number) => {
+    if (requestShip && requestShip.Ships) {
+      const updatedShips = requestShip.Ships.map(ship =>
+        ship.Ship.ShipID === shipId ? { ...ship, ShipsCount: newCount } : ship
+      );
+      setRequestShip({ ...requestShip, Ships: updatedShips });
+    }
+  };
+
+  // Функция для сохранения количества кораблей в локальном состоянии и в базе данных
+  const onSaveShip = async (shipId: number, count: number) => {
+    // Обновляем локальное состояние
+    updateShipCount(shipId, count);
+    
+    // Сохраняем в базе данных
     try {
-      await deleteShipFromRequest(request.RequestShipID, shipId)
-      await load(String(request.RequestShipID))
+      if (requestShip) {
+        await updateShipCountInRequest(requestShip.RequestShipID, shipId, count);
+        // Отправляем событие обновления корзины
+        window.dispatchEvent(new CustomEvent('lt:basket:refresh'));
+      }
+    } catch (error) {
+      console.error('Ошибка при сохранении количества кораблей:', error);
+      alert('Ошибка при сохранении количества кораблей');
+    }
+  };
+
+  async function onDeleteShip(shipId: number) {
+    if (!requestShip) return
+    try {
+      await deleteShipFromRequest(requestShip.RequestShipID, shipId)
+      await load(String(requestShip.RequestShipID))
       window.dispatchEvent(new CustomEvent('lt:basket:refresh'))
     } catch(e) {
       console.error('deleteShip error', e)
@@ -118,15 +157,75 @@ async function load(idToLoad: string | undefined) {
     }
   }
 
+//  Redux Thunk версия onFormation 
+
+const dispatch = useAppDispatch();
+const loadingFormation = useAppSelector(state => state.requestShip.loading);
+
+const onFormation = () => {
+  if (!id) return;
+
+  const c20 = Number(containers20) || 0;
+  const c40 = Number(containers40) || 0;
+
+  const newErrors = {
+    c20: c20 <= 0,
+    c40: c40 <= 0,
+  };
+
+  if (newErrors.c20 && newErrors.c40) {
+    setErrors(newErrors);
+    alert("Заполните хотя бы одно поле контейнеров");
+    return;
+  }
+
+  setErrors({ c20: false, c40: false });
+
+  dispatch(
+    formRequestShipThunk({
+      id: Number(id),
+      containers20: c20,
+      containers40: c40,
+      comment: comment || "",
+    })
+  );
+};
+
+const onSaveRequestShip = async () => {
+  console.log("onSaveRequestShip clicked", requestShip);
+
+  if (!requestShip) return;
+
+  console.log("RequestShipID:", requestShip.RequestShipID);
+
+  const c20 = Number(containers20) || 0;
+  const c40 = Number(containers40) || 0;
+
+  try {
+    await api.api.requestShipUpdate(requestShip.RequestShipID, {
+      containers_20ft_count: c20,
+      containers_40ft_count: c40,
+      comment: comment || "",
+    });
+
+    // alert("Заявка сохранена");
+    window.dispatchEvent(new CustomEvent("lt:basket:refresh"));
+  } catch (e) {
+    console.error("save request error", e);
+    alert("Ошибка сохранения заявки");
+  }
+};
+
+
   async function onDeleteRequest() {
-    if (!request) return
-    if (!confirm('Удалить всю заявку?')) return
+    if (!requestShip) return
+
     try {
-      await deleteRequestShip(request.RequestShipID)
-      // после удаления уйти на список судов
+      await api.api.requestShipDelete(requestShip.RequestShipID)
+
       navigate('/ships')
       window.dispatchEvent(new CustomEvent('lt:basket:refresh'))
-    } catch(e) {
+    } catch (e) {
       console.error('deleteRequest error', e)
       alert('Ошибка удаления заявки')
     }
@@ -134,16 +233,16 @@ async function load(idToLoad: string | undefined) {
 
   async function onCalculate(e?: React.FormEvent) {
     e?.preventDefault()
-    if (!request) return
+    if (!requestShip) return
     try {
       const payload = {
         containers_20ft: Number(containers20) || 0,
         containers_40ft: Number(containers40) || 0,
         comment: comment ?? ''
       }
-      await calculateLoadingTime(request.RequestShipID, payload)
+      await calculateLoadingTime(requestShip.RequestShipID, payload)
       // загрузим обновлённую заявку
-      await load(String(request.RequestShipID))
+      await load(String(requestShip.RequestShipID))
       window.dispatchEvent(new CustomEvent('lt:basket:refresh'))
     } catch (err) {
       console.error('calculate error', err)
@@ -155,7 +254,7 @@ async function load(idToLoad: string | undefined) {
 
   return (
     <>
-    <ShipListIcon />
+    <Navbar />
     <Breadcrumbs />
     
     <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
@@ -163,28 +262,42 @@ async function load(idToLoad: string | undefined) {
       <div className="request" style={{width:1350, display:'flex', flexDirection:'column', alignItems:'center', gap:30, backgroundColor:'#3A3A3A', borderRadius:5, padding:'33px 120px'}}>
         <h1>Расчёт времени погрузки контейнеров</h1>
 
-        { !request ? (
+        { !requestShip ? (
           <div className="empty-message">
             <p>Заявка не найдена. Добавьте контейнеровоз для расчета.</p>
           </div>
         ) : (
           <>
-            <form className="request-form" id="main-form" onSubmit={onCalculate} style={{width:1198}}>
+            <form className="request-form" id="main-form" style={{width:1198}}>
               <div className="request__counts">
                 <div className="request__cnt request__cnt-20-f">
                   <p>Количество 20-футовых контейнеров</p>
-                  <input className="request__cnt-input" type="number" name="containers_20ft"
+                  <input
+                    className="request__cnt-input"
+                    style={errors.c20 ? { border: "2px solid red" } : {}}
+                    type="number"
+                    name="containers_20ft"
                     placeholder="Введите целое число"
                     value={containers20}
-                    onChange={e => setContainers20(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={e => {
+                      setContainers20(e.target.value === '' ? '' : Number(e.target.value));
+                      setErrors(prev => ({ ...prev, c20: false }));
+                    }}
                   />
                 </div>
                 <div className="request__cnt request__cnt-40-f">
                   <p>Количество 40-футовых контейнеров</p>
-                  <input className="request__cnt-input" type="number" name="containers_40ft"
+                  <input
+                    className="request__cnt-input"
+                    style={errors.c40 ? { border: "2px solid red" } : {}}
+                    type="number"
+                    name="containers_40ft"
                     placeholder="Введите целое число"
                     value={containers40}
-                    onChange={e => setContainers40(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={e => {
+                      setContainers40(e.target.value === '' ? '' : Number(e.target.value));
+                      setErrors(prev => ({ ...prev, c40: false }));
+                    }}
                   />
                 </div>
               </div>
@@ -197,47 +310,123 @@ async function load(idToLoad: string | undefined) {
                     onChange={e => setComment(e.target.value)}
                   />
                 </div>
-                <div className="fields_item fields__result">
+                <div className="fields_item">
                   <p>Общее время погрузки</p>
-                  <input className="fields__result--input" type="text" value={resultTime ?? ''} readOnly />
+                  <input className="fields__result--input fields__result" type="text" value={resultTime ?? ''} readOnly />
                 </div>
               </div>
             </form>
 
             <h2>Выбранные контейнеровозы</h2>
-            <div className="request__cards" style={{display:'flex', flexDirection:'column', gap:30}}>
-              {request.Ships && request.Ships.length > 0 ? (
-                request.Ships.map((s) => (
-                  <div key={s.Ship.ShipID} className="request__card" style={{display:'flex', flexDirection:'row', gap:40, width:1198, border:'2px solid #AA9B7D', padding:30, borderRadius:5}}>
-                    <h2 className="request__card__title" style={{width:148}}>{s.Ship.Name}</h2>
+            <div className="request__cards" style={{display:'flex', flexDirection:'column', gap:20}}>
+              {/* Заголовок таблицы */}
+              <div className="request__card_table_header request__card-header">
+                <div className="card-header_request_busket__card__title">Корабль</div>
+                <div className="card-header_request_busket__card__photo">Фото</div>
+                <div className="card-header_request_busket__card__capacity">Вместимость</div>
+                <div className="card-header_request_busket__card__cranes">Краны</div>
+                <div className="card-header_request_busket__card__count">Количество</div>
+                <div className="card-header_request_busket__card__action">Действие</div>
+              </div>
+              
+              {requestShip.Ships && requestShip.Ships.length > 0 ? (
+                requestShip.Ships.map((s) => (
+                  <div key={s.Ship.ShipID} className="request__card_table" >
+                    <div className="card-table_request__card__title">{s.Ship.Name}</div>
 
-                    {s.Ship.PhotoURL ? (
-                      <img className="request__card__ship-card__img"
-                           src={getShipImageUrl(s.Ship.PhotoURL)}
-                           style={{width:360}}
-                           alt={s.Ship.Name}
-                           onError={(ev)=> { (ev.target as HTMLImageElement).style.display = 'none' }}
-                      />
-                    ) : null}
-
-                    <div className="ship-card__text">
-                      <p><b>Вместимость:</b> {s.Ship.Capacity ?? '-'} TEU</p>
-                      <p><b>Габариты:</b> длина {s.Ship.Length ?? '-'} м, ширина {s.Ship.Width ?? '-'} м</p>
-                      <p><b>Краны:</b> {s.Ship.Cranes ?? '-'} одновременно</p>
+                    <div style={{width:200, height:100}}>
+                      {s.Ship.PhotoURL ? (
+                        <img className="request__card__ship-card__img"
+                             src={getShipImageUrl(s.Ship.PhotoURL)}
+                             style={{maxWidth:'100%', maxHeight:'100%'}}
+                             alt={s.Ship.Name}
+                             onError={(ev)=> { (ev.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      ) : (
+                        <div style={{color:'#888'}}>Нет фото</div>
+                      )}
                     </div>
 
-                    <div className="ship-card__other" style={{display:'flex', flexDirection:'column', gap:30}}>
-                      <div className="ship-card__other-item ship-card__cnt"><p>Количество</p><input className="ship-card__cnt-input" type="text" value={String(s.ShipsCount)} readOnly/></div>
+                    <div className="card-title_request__card__capacity">{s.Ship.Capacity ?? '-'} TEU</div>
+                    <div className="card-header_request_busket__card__cranes">{s.Ship.Cranes ?? '-'}</div>
+                    
+                    <div style={{width:150, display:'flex', alignItems:'center', gap:10 }}>
+                      <button
+                        type="button"
+                        className="ship-card__other-btn btn"
+                        onClick={() => {
+                          // Уменьшаем количество кораблей на 1
+                          const newCount = Math.max(1, s.ShipsCount - 1);
+                          // Обновляем локальное состояние
+                          updateShipCount(s.Ship.ShipID, newCount);
+                        }}
+                        style={{
+                          width: '30px',
+                          height: '30px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                          fontSize: '16px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        -
+                      </button>
+                      <input
+                        className="ship-card__cnt-input"
+                        type="number"
+                        value={s.ShipsCount}
+                        onChange={(e) => {
+                          const newCount = parseInt(e.target.value) || 1;
+                          updateShipCount(s.Ship.ShipID, newCount);
+                        }}
+                        min="1"
+                        style={{width:'80px', textAlign:'center'}}
+                      />
+                      <button
+                        type="button"
+                        className="ship-card__other-btn btn"
+                        onClick={() => {
+                          // Увеличиваем количество кораблей на 1
+                          const newCount = s.ShipsCount + 1;
+                          // Обновляем локальное состояние
+                          updateShipCount(s.Ship.ShipID, newCount);
+                        }}
+                        style={{
+                          width: '30px',
+                          height: '30px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                          fontSize: '16px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
 
-                      <div>
-                        <button
-                          type="button"
-                          className="ship-card__other-item ship-card__other-btn btn"
-                          onClick={()=> onDeleteShip(s.Ship.ShipID)}
-                        >
-                          Удалить
-                        </button>
-                      </div>
+                    <div style={{width:150, display:'flex', gap:10}}>
+                      <button
+                        type="button"
+                        className="ship-card__other-btn btn"
+                        onClick={()=> onSaveShip(s.Ship.ShipID, s.ShipsCount)}
+                        style={{padding: '8px 16px', fontSize: '16px', height: 'auto'}}
+                      >
+                        Сохранить
+                      </button>
+                      <button
+                        type="button"
+                        className="ship-card__other-btn btn"
+                        onClick={()=> onDeleteShip(s.Ship.ShipID)}
+                        style={{padding: '8px 16px', fontSize: '16px', height: 'auto'}}
+                      >
+                        Удалить
+                      </button>
                     </div>
                   </div>
                 ))
@@ -249,8 +438,21 @@ async function load(idToLoad: string | undefined) {
             </div>
 
             <div className="ship-card__btns" style={{marginTop:20}}>
-              <button type="submit" form="main-form" className="ship-card__btn beige-btn btn" onClick={onCalculate}>
-                Рассчитать время погрузки
+                <button
+                  type="button"
+                  className="ship-card__btn beige-btn btn"
+                  onClick={onFormation}
+                  disabled={loadingFormation}
+                >
+                  {loadingFormation ? "Формируется…" : "Сформировать"}
+              </button>
+
+              <button
+                type="button"
+                className="ship-card__btn beige-btn btn"
+                onClick={onSaveRequestShip}
+              >
+                Сохранить
               </button>
 
               <button type="button" className="ship-card__btn beige-btn btn" onClick={onDeleteRequest} style={{marginLeft:10}}>
@@ -270,6 +472,6 @@ async function load(idToLoad: string | undefined) {
 // helper — формирует URL для изображения (minio)
 function getShipImageUrl(photoPath?: string) {
   if (!photoPath) return ''
-  const base = import.meta.env.VITE_IMG_BASE ?? 'http://localhost:9000/loading-time-img/img'
+  const base = (import.meta.env?.VITE_IMG_BASE as string) ?? 'http://localhost:9000/loading-time-img/img'
   return `${base}/${photoPath}`
 }
