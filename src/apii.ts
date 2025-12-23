@@ -133,7 +133,7 @@ export async function deleteRequestShip(requestId: number | string) {
   return res.data
 }
 
-// рассчитать время погрузки (POST)
+// рассчитать время погрузки (PUT)
 export async function calculateLoadingTime(requestId: number | string, payload: { containers_20ft?: number, containers_40ft?: number, comment?: string }) {
   const token = getToken()
   const headers: Record<string,string> = {'Content-Type': 'application/json'}
@@ -189,4 +189,46 @@ export async function updateShipCountInRequest(requestId: number | string, shipI
     }
     throw error;
   }
+}
+
+export async function completeRequestShip(
+  requestId: number,
+  action: "complete" | "reject" | "update",
+  updateData?: { comment?: string; containers_20ft_count?: number; containers_40ft_count?: number; status?: string }
+) {
+  const token = getToken();
+  if (!token) throw new Error("No auth token");
+
+  // Если действие - обновление, используем другой endpoint
+  if (action === "update" && updateData) {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    };
+    
+    const res = await axios.put(
+      `${API_BASE}/request_ship/${requestId}`,
+      updateData,
+      { headers, withCredentials: true }
+    );
+    
+    return res.data;
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    Authorization: "Bearer " + token,
+  };
+
+  // Для завершения и отклонения используем PUT запрос к /completion как в бэкенде
+  const formData = new FormData();
+  formData.append("action", action);
+  
+  const res = await axios.put(
+    `${API_BASE}/request_ship/${requestId}/completion`,
+    formData,
+    { headers, withCredentials: true }
+  );
+  
+  return res.data;
 }

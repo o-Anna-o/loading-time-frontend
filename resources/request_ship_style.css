@@ -108,8 +108,8 @@ input, select {
 .request__filters {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
-    /*gap: 20px;*/
+    flex-wrap: wrap;
+    gap: 20px;
     align-items: end;
     margin-bottom: 20px;
     width: 1198px;
@@ -122,6 +122,8 @@ input, select {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    flex: 1 1 calc(25% - 20px); /* 4 колонки с gap=20px */
+    min-width: 200px; /* Минимальная ширина для адаптивности */
 }
 
 .filter-item label {
@@ -135,6 +137,8 @@ input, select {
     border-radius: 5px;
     color: #fff;
     font-size: 22px;
+    width: 100%; /* Занимать всю ширину родителя */
+    box-sizing: border-box; /* Включать padding и border в общую ширину */
 }
 
 .request__cards {
@@ -368,4 +372,70 @@ input, select {
 }
 error-message_h1 {
     text-align: center;
+}
+
+/* Стили для таблицы оператора порта */
+.request__card.port-operator,
+.request__card-header.port-operator {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header_request__card__title.port-operator,
+.request__card__title.port-operator {
+    width: 80px;
+    text-align: left;
+}
+
+.card-header_request__card__20ft.port-operator,
+.request__card__20ft.port-operator {
+    width: 100px;
+    text-align: center;
+}
+
+.card-header_request__card__40ft.port-operator,
+.request__card__40ft.port-operator {
+    width: 100px;
+    text-align: center;
+}
+
+.card-header_request__card__status.port-operator,
+.request__card__status.port-operator {
+    width: 150px;
+    text-align: center;
+}
+
+.card-header_request__card__creation-date.port-operator,
+.request__card__creation-date.port-operator {
+    width: 160px;
+    text-align: center;
+}
+
+.card-header_request__card__formation-date.port-operator,
+.request__card__formation-date.port-operator {
+    width: 160px;
+    text-align: center;
+}
+
+.card-header_request__card__result.port-operator,
+.request__card__result.port-operator {
+    width: 100px;
+    text-align: center;
+}
+
+.card-header_request__card__actions.port-operator,
+.request__card__actions.port-operator {
+    width: 200px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Стили для пустой ячейки действий */
+.request__card__actions.port-operator .empty-actions {
+    width: 200px;
+    height: 40px; /* Высота кнопок */
 }
