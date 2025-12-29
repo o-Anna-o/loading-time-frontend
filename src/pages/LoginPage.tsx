@@ -36,17 +36,18 @@ export default function LoginPage() {
       <div style={{ width: 600, marginTop: 40, background: '#3A3A3A', padding: 30, borderRadius: 6 }}>
         <h2>Вход</h2>
         {error && <div style={{ color: 'red', marginBottom: 10 }}>{error}</div>}
-        <form onSubmit={onSubmit}>
-          <div style={{ marginBottom: 10 }}>
+        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ marginBottom: 10, width: '100%', display: 'flex', justifyContent: 'center' }}>
             <input
               className="request__cnt-input"
               placeholder="Логин"
               value={login}
               onChange={e => setLogin(e.target.value)}
               disabled={loading}
+              style={{ width: 460, textAlign: 'center' }}
             />
           </div>
-          <div style={{ marginBottom: 10 }}>
+          <div style={{ marginBottom: 10, width: '100%', display: 'flex', justifyContent: 'center' }}>
             <input
               className="request__cnt-input"
               type="password"
@@ -54,11 +55,14 @@ export default function LoginPage() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               disabled={loading}
+              style={{ width: 460, textAlign: 'center' }}
             />
           </div>
-          <button className="btn" type="submit" disabled={loading}>
-            {loading ? 'Вход...' : 'Войти'}
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
+            <button className="btn" type="submit" disabled={loading} style={{ width: 200 }}>
+              {loading ? 'Вход...' : 'Войти'}
+            </button>
+          </div>
         </form>
 
         <div style={{ marginTop: 15 }}>
