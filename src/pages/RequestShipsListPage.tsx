@@ -213,7 +213,6 @@ export default function RequestShipsListPage() {
         ) : (
           
           <div className="request__cards">
-            {/* Заголовок таблицы */}
             <div className={`request__card request__card-header ${userRole === "port_operator" ? "port-operator" : ""}`}>
               <div className={`card-header_request__card__title ${userRole === "port_operator" ? "port-operator" : ""}`}>№</div>
               <div className={`card-header_request__card__20ft ${userRole === "port_operator" ? "port-operator" : ""}`}>20 футов</div>
