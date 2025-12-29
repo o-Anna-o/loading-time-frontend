@@ -19,8 +19,8 @@ export default function RequestShipsListPage() {
 
   // Состояния для фильтров
   const [statusFilter, setStatusFilter] = useState('')
-  const [creationDateFilter, setCreationDateFilter] = useState('')
-  const [formationDateFilter, setFormationDateFilter] = useState(new Date().toISOString().split('T')[0])
+  const [formationDateFromFilter, setFormationDateFromFilter] = useState('')
+  const [formationDateToFilter, setFormationDateToFilter] = useState('')
   const [userFilter, setUserFilter] = useState('') // Новый фильтр по создателю
   const [userOptions, setUserOptions] = useState<string[]>([]) // Список логинов пользователей
 
@@ -87,38 +87,25 @@ export default function RequestShipsListPage() {
       return !isDraft(status) && !isDeleted(status);
     });
 
-    // Если не заданы фильтры по дате создания и статусу, применяем фильтр по дате формирования по умолчанию
-    if (!creationDateFilter && !statusFilter) {
-      const today = new Date().toISOString().split('T')[0];
+
+    // Фильтр по диапазону дат оформления
+    if (formationDateFromFilter || formationDateToFilter) {
       result = result.filter(request => {
         const formationDate = request.formationDate || (request as any).FormationDate || (request as any).completed_at;
         if (!formationDate) return false;
         const requestDate = new Date(formationDate);
-        const filterDate = new Date(today);
-        return requestDate.toDateString() === filterDate.toDateString();
+        
+        // Проверяем попадание в диапазон
+        const fromDate = formationDateFromFilter ? new Date(formationDateFromFilter) : null;
+        const toDate = formationDateToFilter ? new Date(formationDateToFilter) : null;
+        
+        // Устанавливаем время на конец дня для toDate
+        if (toDate) {
+          toDate.setHours(23, 59, 59, 999);
+        }
+        
+        return (!fromDate || requestDate >= fromDate) && (!toDate || requestDate <= toDate);
       });
-    } else {
-      // Фильтр по дате создания
-      if (creationDateFilter) {
-        result = result.filter(request => {
-          const creationDate = request.creationDate || (request as any).CreationDate || (request as any).created_at;
-          if (!creationDate) return false;
-          const requestDate = new Date(creationDate);
-          const filterDate = new Date(creationDateFilter);
-          return requestDate.toDateString() === filterDate.toDateString();
-        });
-      }
-
-      // Фильтр по дате оформления
-      if (formationDateFilter) {
-        result = result.filter(request => {
-          const formationDate = request.formationDate || (request as any).FormationDate || (request as any).completed_at;
-          if (!formationDate) return false;
-          const requestDate = new Date(formationDate);
-          const filterDate = new Date(formationDateFilter);
-          return requestDate.toDateString() === filterDate.toDateString();
-        });
-      }
     }
 
     // Фильтр по создателю (ID пользователя)
@@ -164,24 +151,24 @@ export default function RequestShipsListPage() {
             </select>
           </div>
           <div className="filter-item">
-            <label>Дата создания:</label>
+            <label>Дата формирования от:</label>
             <input
               type="date"
-              value={creationDateFilter}
+              value={formationDateFromFilter}
               onChange={(e) => {
-                setCreationDateFilter(e.target.value);
+                setFormationDateFromFilter(e.target.value);
                 // Применяем фильтры сразу при изменении значения
                 setTimeout(() => applyFilters(), 0);
               }}
             />
           </div>
           <div className="filter-item">
-            <label>Дата формирования:</label>
+            <label>Дата формирования до:</label>
             <input
               type="date"
-              value={formationDateFilter}
+              value={formationDateToFilter}
               onChange={(e) => {
-                setFormationDateFilter(e.target.value);
+                setFormationDateToFilter(e.target.value);
                 // Применяем фильтры сразу при изменении значения
                 setTimeout(() => applyFilters(), 0);
               }}
