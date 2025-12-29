@@ -350,15 +350,15 @@ const onSaveRequestShip = async () => {
                     <div className="card-title_request__card__capacity">{s.Ship.Capacity ?? '-'} TEU</div>
                     <div className="card-header_request_busket__card__cranes">{s.Ship.Cranes ?? '-'}</div>
                     
-                    <div style={{width:150, display:'flex', alignItems:'center', gap:10 }}>
+                    <div style={{width:190, display:'flex', alignItems:'center', gap:10 }}>
                       <button
                         type="button"
                         className="ship-card__other-btn btn"
-                        onClick={() => {
+                        onClick={async () => {
                           // Уменьшаем количество кораблей на 1
                           const newCount = Math.max(1, s.ShipsCount - 1);
-                          // Обновляем локальное состояние
-                          updateShipCount(s.Ship.ShipID, newCount);
+                          // Обновляем локальное состояние и в базе данных
+                          await updateShipCount(s.Ship.ShipID, newCount);
                         }}
                         style={{
                           width: '30px',
@@ -378,9 +378,9 @@ const onSaveRequestShip = async () => {
                         className="ship-card__cnt-input"
                         type="number"
                         value={s.ShipsCount}
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const newCount = parseInt(e.target.value) || 1;
-                          updateShipCount(s.Ship.ShipID, newCount);
+                          await updateShipCount(s.Ship.ShipID, newCount);
                         }}
                         min="1"
                         style={{width:'80px', textAlign:'center'}}
@@ -388,11 +388,11 @@ const onSaveRequestShip = async () => {
                       <button
                         type="button"
                         className="ship-card__other-btn btn"
-                        onClick={() => {
+                        onClick={async () => {
                           // Увеличиваем количество кораблей на 1
                           const newCount = s.ShipsCount + 1;
-                          // Обновляем локальное состояние
-                          updateShipCount(s.Ship.ShipID, newCount);
+                          // Обновляем локальное состояние и в базе данных
+                          await updateShipCount(s.Ship.ShipID, newCount);
                         }}
                         style={{
                           width: '30px',
@@ -411,14 +411,6 @@ const onSaveRequestShip = async () => {
                     </div>
 
                     <div style={{width:150, display:'flex', gap:10}}>
-                      <button
-                        type="button"
-                        className="ship-card__other-btn btn"
-                        onClick={()=> onSaveShip(s.Ship.ShipID, s.ShipsCount)}
-                        style={{padding: '8px 16px', fontSize: '16px', height: 'auto'}}
-                      >
-                        Сохранить
-                      </button>
                       <button
                         type="button"
                         className="ship-card__other-btn btn"
