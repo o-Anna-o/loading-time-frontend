@@ -208,21 +208,7 @@ export default function ProfilePage() {
           </div>
           
           <div className="fields_item">
-            <p><strong>Вес груза:</strong></p>
-            {isEditing ? (
-              <input
-                className="request__cnt-input"
-                type="number"
-                value={user?.cargoWeight || 0}
-                onChange={(e) => handleInputChange('cargoWeight', Number(e.target.value))}
-              />
-            ) : (
-              <p>{user?.cargoWeight || 0}</p>
-            )}
-          </div>
-          
-          <div className="fields_item">
-            <p><strong>Контейнеры 20ft:</strong></p>
+            <p><strong>Количестве 20-футовых контейнеров:</strong></p>
             {isEditing ? (
               <input
                 className="request__cnt-input"
@@ -236,7 +222,7 @@ export default function ProfilePage() {
           </div>
           
           <div className="fields_item">
-            <p><strong>Контейнеры 40ft:</strong></p>
+            <p><strong>Количестве 40-футовых контейнеров:</strong></p>
             {isEditing ? (
               <input
                 className="request__cnt-input"

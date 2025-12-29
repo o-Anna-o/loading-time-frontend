@@ -181,7 +181,7 @@ input, select {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 50px;
+    gap: 30px;
 
     font-size: 22px;
     width: 1198px;
@@ -198,7 +198,7 @@ input, select {
     text-align: center;
 }
 .card-title_request__card__capacity {
-    width: 170px;
+    width: 270px;
     text-align: center;
 }
 .card-header_request_busket__card__cranes {
